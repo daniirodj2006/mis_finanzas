@@ -5,6 +5,7 @@
 
 import {
   loginWithGoogle, logout as fbLogout, onAuthChange,
+  checkRedirectResult,
   subscribeMovimientos, addMovimiento, deleteMovimiento,
   saveConfig, loadConfig, demoStore, firebaseReady
 } from './firebase-config.js';
@@ -318,22 +319,8 @@ function showLogin() {
 
 // ── Init ─────────────────────────────────────────────────────────
 export function initApp() {
-  // Auth state listener (Firebase)
-  if (firebaseReady) {
-    onAuthChange(user => {
-      if (user && !STATE.demoMode) showApp(user);
-      else if (!user && !STATE.demoMode) showLogin();
-    });
-  } else {
-    showLogin();
-  }
-
-  // ── Botones login ──
-  document.getElementById('btn-google').addEventListener('click', async () => {
-    try { await loginWithGoogle(); }
-    catch { toast('Error al iniciar sesión. Usá el modo demo.'); }
-  });
-  document.getElementById('btn-demo').addEventListener('click', () => showApp(null, true));
+  // Sin login — entra directo con datos locales (localStorage)
+  showApp(null, true);
 
   // ── Logout ──
   document.getElementById('btn-logout').addEventListener('click', async () => {
