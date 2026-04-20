@@ -1,4 +1,12 @@
-
+/**
+ * firebase-config.js
+ * ─────────────────────────────────────────────────────────────
+ * Configuración de Firebase + capa de sincronización
+ *
+ * ⚠️ REEMPLAZÁ los valores de firebaseConfig con los de tu
+ *    proyecto en https://console.firebase.google.com
+ * ─────────────────────────────────────────────────────────────
+ */
 
 import { initializeApp }                       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider,
@@ -8,9 +16,13 @@ import { getFirestore, collection, addDoc,
          deleteDoc, doc, onSnapshot,
          query, where, orderBy,
          setDoc, getDoc, serverTimestamp,
-         enableIndexedDbPersistence }          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+         initializeFirestore, persistentLocalCache,
+         persistentMultipleTabManager }        from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-
+/* ═══════════════════════════════════════════════════════════════
+   🔧  PEGÁ AQUÍ TU CONFIGURACIÓN DE FIREBASE
+   Vas a Console → Configuración del proyecto → Tu app web
+═══════════════════════════════════════════════════════════════ */
 const firebaseConfig = {
   apiKey:            "AIzaSyBEGrbUvoOWEChV5hkGr1B4pHHjlvnbA8c",
   authDomain:        "mis-finanzas-9bbc5.firebaseapp.com",
@@ -19,6 +31,7 @@ const firebaseConfig = {
   messagingSenderId: "952118782118",
   appId:             "1:952118782118:web:a25aff0ab9db93b7c26c67"
 };
+/* ═══════════════════════════════════════════════════════════════ */
 
 // ── Constantes de colección ─────────────────────────────────────
 export const COL_MOV    = 'movimientos';
@@ -31,16 +44,11 @@ let firebaseReady = false;
 try {
   app  = initializeApp(firebaseConfig);
   auth = getAuth(app);
-  db   = getFirestore(app);
-
-  // Persistencia offline: los datos sobreviven el refresh aunque
-  // no haya internet. Firebase los guarda en IndexedDB local.
-  enableIndexedDbPersistence(db).catch(err => {
-    if (err.code === 'failed-precondition') {
-      console.warn('[Firebase] Persistencia offline requiere una sola pestaña.');
-    } else if (err.code === 'unimplemented') {
-      console.warn('[Firebase] Persistencia offline no disponible en este navegador.');
-    }
+  // Nueva API de persistencia offline (reemplaza enableIndexedDbPersistence)
+  db   = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
   });
 
   firebaseReady = true;
@@ -164,4 +172,3 @@ export const demoStore = {
     localStorage.setItem('mf_demo_config', JSON.stringify({ ...current, ...data }));
   }
 };
-
