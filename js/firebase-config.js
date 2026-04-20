@@ -10,7 +10,8 @@
 
 import { initializeApp }                       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider,
-         signInWithPopup, signOut,
+         signInWithPopup, signInWithRedirect,
+         getRedirectResult, signOut,
          onAuthStateChanged }                  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, collection, addDoc,
          deleteDoc, doc, onSnapshot,
@@ -48,8 +49,8 @@ try {
   db   = initializeFirestore(app, {
     localCache: persistentLocalCache({
       tabManager: persistentMultipleTabManager()
-    })
-  });
+  )
+);
 
   firebaseReady = true;
 } catch (e) {
@@ -62,7 +63,16 @@ export { auth, db, firebaseReady };
 export function loginWithGoogle() {
   if (!firebaseReady) return Promise.reject(new Error('Firebase no configurado'));
   const provider = new GoogleAuthProvider();
-  return signInWithPopup(auth, provider);
+  
+  // Siempre redirect — funciona en GitHub Pages, iPhone y desktop
+
+
+  return signInWithRedirect(auth, provider);
+}
+
+export function checkRedirectResult() {
+  if (!firebaseReady) return Promise.resolve(null);
+  return getRedirectResult(auth);
 }
 
 export function logout() {
@@ -95,12 +105,12 @@ export function subscribeMovimientos(uid, callback) {
     // Guarda también en localStorage como caché offline
     localStorage.setItem(`mf_movimientos_${uid}`, JSON.stringify(docs));
     callback(docs);
-  }, err => {
+, err => {
     console.warn('[Firestore] Error al escuchar:', err.message);
     // Si falla la red, carga del caché local
     const cached = localStorage.getItem(`mf_movimientos_${uid}`);
     if (cached) callback(JSON.parse(cached));
-  });
+);
 }
 
 export async function addMovimiento(data) {
@@ -108,7 +118,7 @@ export async function addMovimiento(data) {
   return addDoc(collection(db, COL_MOV), {
     ...data,
     createdAt: serverTimestamp()
-  });
+);
 }
 
 export async function deleteMovimiento(id) {
@@ -121,7 +131,7 @@ export async function saveConfig(uid, data) {
   if (!firebaseReady || !db) {
     localStorage.setItem(`mf_config_${uid}`, JSON.stringify(data));
     return;
-  }
+
   await setDoc(doc(db, COL_CONFIG, uid), data, { merge: true });
   // Caché local también
   localStorage.setItem(`mf_config_${uid}`, JSON.stringify(data));
@@ -136,9 +146,9 @@ export async function loadConfig(uid) {
         const data = snap.data();
         localStorage.setItem(`mf_config_${uid}`, JSON.stringify(data));
         return data;
-      }
-    } catch (e) { /* fallthrough a localStorage */ }
-  }
+    
+   catch (e) { /* fallthrough a localStorage */ }
+
   // Fallback a caché local
   const cached = localStorage.getItem(`mf_config_${uid}`);
   return cached ? JSON.parse(cached) : {};
@@ -151,24 +161,24 @@ export const demoStore = {
   getAll() {
     const raw = localStorage.getItem(DEMO_KEY);
     return raw ? JSON.parse(raw) : [];
-  },
+,
   add(data) {
     const list = this.getAll();
     const item = { id: 'demo_' + Date.now(), ...data };
     list.unshift(item);
     localStorage.setItem(DEMO_KEY, JSON.stringify(list));
     return item;
-  },
+,
   delete(id) {
     const list = this.getAll().filter(m => m.id !== id);
     localStorage.setItem(DEMO_KEY, JSON.stringify(list));
-  },
+,
   getConfig() {
     const raw = localStorage.getItem('mf_demo_config');
     return raw ? JSON.parse(raw) : { tc: 530, metaAnual: 500000 };
-  },
+,
   saveConfig(data) {
     const current = this.getConfig();
     localStorage.setItem('mf_demo_config', JSON.stringify({ ...current, ...data }));
-  }
+
 };
