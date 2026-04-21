@@ -109,31 +109,17 @@ function startListening() {
 
 // ── Data: add ────────────────────────────────────────────────────
 export async function addItem(data) {
-  setSyncStatus('syncing');
-  if (STATE.demoMode) {
-    demoStore.add({ ...data, uid: 'demo' });
-    STATE.movimientos = demoStore.getAll();
-    setSyncStatus('synced');
-    renderAll();
-  } else {
-    await addMovimiento({ ...data, uid: STATE.uid });
-    // onSnapshot actualizará STATE.movimientos automáticamente
-  }
+  demoStore.add({ ...data, uid: 'local' });
+  STATE.movimientos = demoStore.getAll();
+  renderAll();
 }
 
 // ── Data: delete ─────────────────────────────────────────────────
 export async function deleteItem(id) {
   if (!confirm('¿Eliminar este movimiento?')) return;
-  setSyncStatus('syncing');
-  if (STATE.demoMode) {
-    demoStore.delete(id);
-    STATE.movimientos = demoStore.getAll();
-    setSyncStatus('synced');
-    renderAll();
-  } else {
-    await deleteMovimiento(id);
-    // onSnapshot actualizará STATE.movimientos automáticamente
-  }
+  demoStore.delete(id);
+  STATE.movimientos = demoStore.getAll();
+  renderAll();
   toast('Movimiento eliminado');
 }
 
@@ -319,15 +305,36 @@ function showLogin() {
 
 // ── Init ─────────────────────────────────────────────────────────
 export function initApp() {
-  // Sin login — entra directo con datos locales (localStorage)
-  showApp(null, true);
+  // Sin login — entra directo con datos guardados en localStorage
+  STATE.uid      = 'local';
+  STATE.demoMode = true;
 
-  // ── Logout ──
-  document.getElementById('btn-logout').addEventListener('click', async () => {
-    if (STATE.unsubscribe) STATE.unsubscribe();
-    STATE.demoMode = false; STATE.uid = null;
-    await fbLogout();
-    showLogin();
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('fab').style.display = 'flex';
+  document.getElementById('sb-name').textContent  = 'Mis Finanzas 🌸';
+  document.getElementById('sb-email').textContent = 'Datos guardados en este dispositivo';
+
+  const now = new Date();
+  document.getElementById('month-sel').value = now.getMonth();
+  document.getElementById('year-sel').value  = now.getFullYear();
+
+  const cfg = demoStore.getConfig();
+  STATE.tc        = cfg.tc        || 530;
+  STATE.metaAnual = cfg.metaAnual || 500000;
+  document.getElementById('tc-display').textContent = '₡' + STATE.tc.toLocaleString('es-CR');
+
+  STATE.movimientos = demoStore.getAll();
+  setSyncStatus('synced');
+  renderAll();
+
+  // ── Logout (limpiar datos) ──
+  document.getElementById('btn-logout').addEventListener('click', () => {
+    if (confirm('¿Borrar todos los datos guardados?')) {
+      localStorage.clear();
+      STATE.movimientos = [];
+      renderAll();
+      toast('Datos borrados');
+    }
   });
 
   // ── Menu / sidebar ──
