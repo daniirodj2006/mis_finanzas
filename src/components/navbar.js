@@ -1,3 +1,5 @@
+import { getAuth } from 'firebase/auth';
+
 const icons = {
   dashboard: `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
   cuentas: `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>`,
@@ -33,7 +35,14 @@ export function renderNavbar(activePage) {
       const page = btn.dataset.page;
       import(`../pages/${page}.js`).then(module => {
         const fnName = 'render' + page.charAt(0).toUpperCase() + page.slice(1);
-        module[fnName]();
+
+        if (page === 'dashboard') {
+          const user = getAuth().currentUser;
+          module[fnName](user);
+        } else {
+          module[fnName]();
+        }
+
         renderNavbar(page);
       });
     });

@@ -6,9 +6,26 @@ const iconEditar = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="1
 const iconBorrar = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
 const iconVer = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
 
+const coloresBase = ['#1a1a2e','#16213e','#533483','#c0392b','#e67e22','#27ae60','#2980b9'];
+
+function getTemaColors() {
+  const temaId = localStorage.getItem('tema') || 'blanco';
+  const mapa = {
+    blanco:   '#2d6e6a',
+    neutro:   '#3730a3',
+    rosa:     '#9d3b6a',
+    celeste:  '#0369a1',
+    amarillo: '#92750a',
+    verde:    '#1a5c42',
+  };
+  const primary = mapa[temaId] || '#1a1a2e';
+  return [primary, ...coloresBase.filter(c => c !== primary)];
+}
+
 let editandoId = null;
 let tipoSeleccionado = 'credito';
 let monedaSeleccionada = 'CRC';
+let colorSeleccionado = getTemaColors()[0];
 let tarjetaPagando = null;
 let cuentaPagoSeleccionada = null;
 let monedaPagando = 'CRC';
@@ -24,6 +41,7 @@ function cerrarSheet() {
   editandoId = null;
   tipoSeleccionado = 'credito';
   monedaSeleccionada = 'CRC';
+  colorSeleccionado = getTemaColors()[0];
   document.querySelector('#tarjeta-nombre').value = '';
   document.querySelector('#tarjeta-limite').value = '';
   document.querySelector('#tarjeta-corte').value = '';
@@ -44,12 +62,16 @@ export async function renderTarjetas() {
     where('uid', '==', auth.currentUser.uid)
   ));
   const cuentas = cuentasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const colores = getTemaColors();
 
   document.querySelector('#main-content').innerHTML = `
     <div class="max-w-md mx-auto">
 
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-semibold text-gray-800">Tarjetas</h1>
+        <div>
+          <h1 class="text-2xl font-semibold text-gray-800">Tarjetas</h1>
+          <p class="text-gray-400 text-xs mt-0.5">Tus tarjetas de crédito y débito</p>
+        </div>
         <button id="btn-nueva-tarjeta" class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center hover:bg-indigo-700 transition">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -61,18 +83,14 @@ export async function renderTarjetas() {
 
     </div>
 
-    <!-- Overlay -->
     <div id="sheet-overlay" class="hidden fixed inset-0 bg-black bg-opacity-40 z-40"></div>
 
-    <!-- Bottom sheet nueva tarjeta -->
     <div id="sheet-tarjeta" class="hidden fixed bottom-0 left-0 right-0 z-50 flex justify-center">
       <div class="bg-white rounded-t-2xl w-full max-w-md p-6 pb-8 overflow-y-auto max-h-[90vh]">
         <div class="flex items-center justify-between mb-4">
           <p id="sheet-titulo" class="text-gray-800 font-semibold">Nueva tarjeta</p>
           <button id="btn-cerrar-sheet" class="text-gray-400 hover:text-gray-600">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
 
@@ -89,6 +107,13 @@ export async function renderTarjetas() {
         <div class="flex gap-2 mb-3">
           <button data-moneda="CRC" class="moneda-btn flex-1 px-4 py-3 rounded-xl border border-indigo-400 text-indigo-600 bg-indigo-50 text-sm transition">₡ Colones</button>
           <button data-moneda="USD" class="moneda-btn flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm text-gray-500 hover:border-indigo-400 transition">$ Dólares</button>
+        </div>
+
+        <p class="text-gray-400 text-xs mb-2">Color de tarjeta</p>
+        <div class="flex gap-2 mb-3 flex-wrap">
+          ${colores.map((c, i) => `
+            <button data-color="${c}" class="color-btn w-9 h-9 rounded-full transition-all ${i === 0 ? 'ring-2 ring-offset-2 ring-gray-500' : ''}" style="background-color: ${c}"></button>
+          `).join('')}
         </div>
 
         <input id="tarjeta-limite" type="number" placeholder="Límite de crédito (opcional)"
@@ -113,18 +138,16 @@ export async function renderTarjetas() {
       </div>
     </div>
 
-    <!-- Modal pagar tarjeta -->
+    <!-- Modal pagar -->
     <div id="modal-pago" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50 flex items-end justify-center">
       <div class="bg-white rounded-t-2xl w-full max-w-md p-6 pb-8">
         <div class="flex items-center justify-between mb-4">
           <p class="text-gray-800 font-semibold">Pagar tarjeta</p>
           <button id="btn-cerrar-pago" class="text-gray-400 hover:text-gray-600">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <div id="info-saldo-tarjeta" class="bg-gray-50 rounded-xl p-3 mb-4 text-sm text-gray-600"></div>
+        <div id="info-saldo-tarjeta" class="rounded-xl p-3 mb-4 text-sm bg-gray-50"></div>
         <p class="text-gray-400 text-xs mb-2">¿Qué saldo pagás?</p>
         <div class="flex gap-2 mb-3">
           <button data-pagar="CRC" class="pagar-moneda flex-1 px-4 py-3 rounded-xl border border-indigo-400 text-indigo-600 bg-indigo-50 text-sm transition">₡ Colones</button>
@@ -140,15 +163,13 @@ export async function renderTarjetas() {
       </div>
     </div>
 
-    <!-- Modal resumen gastos tarjeta -->
+    <!-- Modal resumen -->
     <div id="modal-resumen" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50 flex items-end justify-center">
       <div class="bg-white rounded-t-2xl w-full max-w-md p-6 pb-8 max-h-[85vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
           <p id="resumen-titulo" class="text-gray-800 font-semibold"></p>
           <button id="btn-cerrar-resumen" class="text-gray-400 hover:text-gray-600">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
         <div class="grid grid-cols-2 gap-2 mb-4">
@@ -193,6 +214,15 @@ export async function renderTarjetas() {
     });
   });
 
+  document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.color-btn').forEach(b =>
+        b.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-500'));
+      btn.classList.add('ring-2', 'ring-offset-2', 'ring-gray-500');
+      colorSeleccionado = btn.dataset.color;
+    });
+  });
+
   document.querySelector('#btn-guardar-tarjeta').addEventListener('click', async () => {
     const nombre = document.querySelector('#tarjeta-nombre').value.trim();
     const limite = parseFloat(document.querySelector('#tarjeta-limite').value) || 0;
@@ -202,26 +232,21 @@ export async function renderTarjetas() {
 
     if (editandoId) {
       await updateDoc(doc(db, 'tarjetas', editandoId), {
-        nombre, tipo: tipoSeleccionado, moneda: monedaSeleccionada, limite, corte, pago
+        nombre, tipo: tipoSeleccionado, moneda: monedaSeleccionada,
+        limite, corte, pago, color: colorSeleccionado
       });
     } else {
       await addDoc(collection(db, 'tarjetas'), {
         uid: auth.currentUser.uid,
-        nombre,
-        tipo: tipoSeleccionado,
-        moneda: monedaSeleccionada,
-        limite,
-        saldoCRC: 0,
-        saldoUSD: 0,
-        corte,
-        pago,
+        nombre, tipo: tipoSeleccionado, moneda: monedaSeleccionada,
+        limite, saldoCRC: 0, saldoUSD: 0, corte, pago,
+        color: colorSeleccionado,
         fecha: new Date()
       });
     }
     cerrarSheet();
   });
 
-  // Pagar moneda toggle
   document.querySelectorAll('.pagar-moneda').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.pagar-moneda').forEach(b =>
@@ -252,21 +277,15 @@ export async function renderTarjetas() {
       document.querySelector('#error-cuenta-pago').classList.remove('hidden');
       return;
     }
-
-    const saldoAPagar = monedaPagando === 'CRC'
-      ? tarjetaPagando.saldoCRC
-      : tarjetaPagando.saldoUSD;
-
+    const saldoAPagar = monedaPagando === 'CRC' ? tarjetaPagando.saldoCRC : tarjetaPagando.saldoUSD;
     const tc = await getTipoCambio();
     const montoDescontarCuenta = convertir(saldoAPagar, monedaPagando, cuentaPagoSeleccionada.moneda, tc);
 
     await updateDoc(doc(db, 'cuentas', cuentaPagoSeleccionada.id), {
       balance: cuentaPagoSeleccionada.balance - montoDescontarCuenta
     });
-
     const updateTarjeta = monedaPagando === 'CRC' ? { saldoCRC: 0 } : { saldoUSD: 0 };
     await updateDoc(doc(db, 'tarjetas', tarjetaPagando.id), updateTarjeta);
-
     await addDoc(collection(db, 'pagosTarjeta'), {
       uid: auth.currentUser.uid,
       tarjetaId: tarjetaPagando.id,
@@ -275,16 +294,10 @@ export async function renderTarjetas() {
       moneda: cuentaPagoSeleccionada.moneda,
       fecha: new Date()
     });
-
     document.querySelector('#modal-pago').classList.add('hidden');
   });
 
-  // Lista tarjetas
-  const q = query(
-    collection(db, 'tarjetas'),
-    where('uid', '==', auth.currentUser.uid),
-    orderBy('fecha', 'desc')
-  );
+  const q = query(collection(db, 'tarjetas'), where('uid', '==', auth.currentUser.uid), orderBy('fecha', 'desc'));
 
   onSnapshot(q, (snapshot) => {
     const lista = document.querySelector('#lista-tarjetas');
@@ -297,39 +310,66 @@ export async function renderTarjetas() {
 
     lista.innerHTML = snapshot.docs.map(d => {
       const data = d.data();
-      const colorTipo = data.tipo === 'credito' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600';
-      const colorMoneda = data.moneda === 'USD' ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600';
       const saldoCRC = data.saldoCRC || 0;
       const saldoUSD = data.saldoUSD || 0;
+      const color = data.color || colores[0];
+      const tipoLabel = data.tipo === 'credito' ? 'Tarjeta de crédito' : 'Tarjeta de débito';
+      const red = data.tipo === 'credito' ? 'CARD' : 'MC';
+      const porcentaje = data.limite > 0
+        ? Math.min(Math.round((saldoCRC / data.limite) * 100), 100)
+        : 0;
 
       return `
-        <div class="bg-white rounded-2xl p-4 shadow-sm mb-3">
-          <div class="flex justify-between items-start mb-3">
+        <!-- Card tarjeta -->
+        <div class="rounded-2xl p-5 mb-2 relative overflow-hidden"
+          style="background: linear-gradient(135deg, ${color}, ${color}99)">
+          <div class="flex justify-between items-start mb-5">
             <div>
-              <p class="text-gray-800 font-medium text-sm">${data.nombre}</p>
-              <div class="flex gap-1 mt-1">
-                <span class="text-xs px-2 py-0.5 rounded-full ${colorTipo}">${data.tipo}</span>
-                <span class="text-xs px-2 py-0.5 rounded-full ${colorMoneda}">${data.moneda}</span>
-              </div>
+              <p class="text-white text-xs mb-1" style="opacity:0.7">${tipoLabel}</p>
+              <p class="text-white font-bold text-base">${data.nombre}</p>
             </div>
-            <div class="flex items-center gap-2">
-              <button data-id="${d.id}" class="btn-ver text-gray-400 hover:text-indigo-500 transition">${iconVer}</button>
-              <button data-id="${d.id}" data-nombre="${data.nombre}" data-tipo="${data.tipo}" data-moneda="${data.moneda}" data-limite="${data.limite}" data-corte="${data.corte}" data-pago="${data.pago}"
-                class="btn-editar text-gray-400 hover:text-indigo-500 transition">${iconEditar}</button>
-              <button data-id="${d.id}" class="btn-borrar text-gray-400 hover:text-red-500 transition">${iconBorrar}</button>
+            <div class="flex flex-col items-end gap-2">
+              <p class="text-white font-bold text-lg">${red}</p>
+              <div class="flex gap-2">
+                <button data-id="${d.id}" class="btn-ver" style="color:white;opacity:0.8">${iconVer}</button>
+                <button data-id="${d.id}" data-nombre="${data.nombre}" data-tipo="${data.tipo}" data-moneda="${data.moneda}" data-limite="${data.limite}" data-corte="${data.corte}" data-pago="${data.pago}" data-color="${color}"
+                  class="btn-editar" style="color:white;opacity:0.8">${iconEditar}</button>
+                <button data-id="${d.id}" class="btn-borrar" style="color:white;opacity:0.8">${iconBorrar}</button>
+              </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 mb-3">
-            <div class="bg-gray-50 rounded-xl p-2 text-center">
-              <p class="text-gray-400 text-xs">Saldo ₡</p>
-              <p class="text-gray-800 font-semibold text-sm">₡${saldoCRC.toLocaleString()}</p>
+          <p class="text-white font-mono text-sm mb-4" style="opacity:0.6">**** **** **** ****</p>
+
+          <div class="flex justify-between items-end">
+            <div>
+              <p class="text-white text-xs mb-0.5" style="opacity:0.6">Disponible</p>
+              <p class="text-white font-bold text-lg">₡${Math.max(0, data.limite - saldoCRC).toLocaleString()}</p>
             </div>
-            <div class="bg-gray-50 rounded-xl p-2 text-center">
-              <p class="text-gray-400 text-xs">Saldo $</p>
-              <p class="text-gray-800 font-semibold text-sm">$${saldoUSD.toLocaleString()}</p>
-            </div>
+            ${data.limite > 0 ? `
+              <div class="text-right">
+                <p class="text-white text-xs mb-0.5" style="opacity:0.6">Límite</p>
+                <p class="text-white font-semibold">₡${data.limite.toLocaleString()}</p>
+              </div>
+            ` : ''}
           </div>
+        </div>
+
+        <!-- Info debajo card -->
+        <div class="bg-white rounded-2xl px-4 pt-3 pb-4 mb-4 shadow-sm">
+          <div class="flex justify-between text-xs text-gray-500 mb-2">
+            <div class="flex gap-2">
+              <span>₡ <span class="text-red-400 font-medium">${saldoCRC.toLocaleString()}</span></span>
+              <span>$ <span class="text-red-400 font-medium">${saldoUSD.toLocaleString()}</span></span>
+            </div>
+            ${data.limite > 0 ? `<span class="font-semibold" style="color: ${porcentaje > 80 ? '#ef4444' : 'inherit'}">${porcentaje}%</span>` : ''}
+          </div>
+
+          ${data.limite > 0 ? `
+            <div class="w-full bg-gray-100 rounded-full h-1.5 mb-3">
+              <div class="h-1.5 rounded-full transition-all" style="width: ${porcentaje}%; background-color: ${porcentaje > 80 ? '#ef4444' : color}"></div>
+            </div>
+          ` : ''}
 
           ${data.corte || data.pago ? `
             <div class="flex gap-3 text-xs text-gray-400 mb-3">
@@ -339,25 +379,22 @@ export async function renderTarjetas() {
           ` : ''}
 
           <button data-id="${d.id}" data-nombre="${data.nombre}" data-saldocrc="${saldoCRC}" data-saldousd="${saldoUSD}"
-            class="btn-pagar w-full bg-indigo-50 text-indigo-600 rounded-xl py-2 text-sm font-medium hover:bg-indigo-100 transition">
+            class="btn-pagar w-full bg-indigo-50 text-indigo-600 rounded-xl py-2.5 text-sm font-medium hover:bg-indigo-100 transition">
             Pagar tarjeta
           </button>
         </div>
       `;
     }).join('');
 
-    // Ver resumen
     document.querySelectorAll('.btn-ver').forEach(btn => {
       btn.addEventListener('click', async () => {
         const tarjeta = snapshot.docs.find(d => d.id === btn.dataset.id);
         if (!tarjeta) return;
         const data = tarjeta.data();
-
         document.querySelector('#resumen-titulo').textContent = data.nombre;
         document.querySelector('#resumen-saldo-crc').textContent = `₡${(data.saldoCRC || 0).toLocaleString()}`;
         document.querySelector('#resumen-saldo-usd').textContent = `$${(data.saldoUSD || 0).toLocaleString()}`;
 
-        // Cargar gastos de esta tarjeta
         const gastosSnap = await getDocs(query(
           collection(db, 'transacciones'),
           where('uid', '==', auth.currentUser.uid),
@@ -384,17 +421,16 @@ export async function renderTarjetas() {
             `;
           }).join('');
         }
-
         document.querySelector('#modal-resumen').classList.remove('hidden');
       });
     });
 
-    // Editar
     document.querySelectorAll('.btn-editar').forEach(btn => {
       btn.addEventListener('click', () => {
         editandoId = btn.dataset.id;
         tipoSeleccionado = btn.dataset.tipo;
         monedaSeleccionada = btn.dataset.moneda;
+        colorSeleccionado = btn.dataset.color;
         document.querySelector('#tarjeta-nombre').value = btn.dataset.nombre;
         document.querySelector('#tarjeta-limite').value = btn.dataset.limite;
         document.querySelector('#tarjeta-corte').value = btn.dataset.corte;
@@ -411,11 +447,15 @@ export async function renderTarjetas() {
           if (b.dataset.moneda === monedaSeleccionada)
             b.classList.add('border-indigo-400', 'text-indigo-600', 'bg-indigo-50');
         });
+        document.querySelectorAll('.color-btn').forEach(b => {
+          b.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-500');
+          if (b.dataset.color === colorSeleccionado)
+            b.classList.add('ring-2', 'ring-offset-2', 'ring-gray-500');
+        });
         abrirSheet();
       });
     });
 
-    // Borrar
     document.querySelectorAll('.btn-borrar').forEach(btn => {
       btn.addEventListener('click', async () => {
         if (confirm('¿Borrar esta tarjeta?')) {
@@ -424,7 +464,6 @@ export async function renderTarjetas() {
       });
     });
 
-    // Pagar tarjeta
     document.querySelectorAll('.btn-pagar').forEach(btn => {
       btn.addEventListener('click', () => {
         tarjetaPagando = {
@@ -437,9 +476,9 @@ export async function renderTarjetas() {
         monedaPagando = 'CRC';
 
         document.querySelector('#info-saldo-tarjeta').innerHTML = `
-          <p class="font-medium mb-1">${tarjetaPagando.nombre}</p>
-          <p>Saldo ₡: ${tarjetaPagando.saldoCRC.toLocaleString()}</p>
-          <p>Saldo $: ${tarjetaPagando.saldoUSD.toLocaleString()}</p>
+          <p class="font-medium text-gray-800 mb-1">${tarjetaPagando.nombre}</p>
+          <p class="text-gray-500 text-xs">Saldo ₡: ${tarjetaPagando.saldoCRC.toLocaleString()}</p>
+          <p class="text-gray-500 text-xs">Saldo $: ${tarjetaPagando.saldoUSD.toLocaleString()}</p>
         `;
 
         document.querySelectorAll('.pagar-moneda').forEach(b => {
@@ -452,7 +491,7 @@ export async function renderTarjetas() {
         cuentasDiv.innerHTML = cuentas.map(c => `
           <button data-id="${c.id}" data-moneda="${c.moneda}" data-balance="${c.balance}"
             class="cuenta-pago-btn text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition">
-            ${c.nombre} (${c.moneda === 'CRC' ? '₡' : '$'}${c.balance.toLocaleString()})
+            ${c.nombre} (${c.moneda === 'CRC' ? '₡' : '$'}${(c.balance || 0).toLocaleString()})
           </button>
         `).join('');
 

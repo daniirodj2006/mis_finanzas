@@ -2,8 +2,8 @@ import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "../firebase.js";
 
 export function renderLogin() {
-  document.querySelector('#app').innerHTML = `
-    <div class="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-6">
+  document.querySelector('#main-content').innerHTML = `
+    <div class="min-h-screen flex flex-col items-center justify-center px-6">
       
       <div class="mb-8 text-center">
         <h1 class="text-3xl font-semibold text-gray-800">Mis Finanzas</h1>

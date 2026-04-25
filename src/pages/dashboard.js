@@ -1,5 +1,5 @@
-import { auth, db } from '../firebase.js';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { db } from '../firebase.js';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Chart } from 'chart.js/auto';
 import { getTipoCambio, convertir } from '../utils/tipoCambio.js';
 
@@ -8,9 +8,8 @@ let periodoSeleccionado = 'mes';
 let mesSeleccionado = new Date().getMonth();
 let anioSeleccionado = new Date().getFullYear();
 
-export async function renderDashboard() {
-  const user = auth.currentUser;
-  const nombre = user ? user.displayName.split(' ')[0] : 'Usuario';
+export async function renderDashboard(user) {
+  const nombre = user.displayName.split(' ')[0];
   const tc = await getTipoCambio();
 
   const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -24,7 +23,7 @@ export async function renderDashboard() {
           <p class="text-gray-400 text-sm font-light">Bienvenida de vuelta</p>
           <h1 class="text-2xl font-semibold text-gray-800">${nombre} 👋</h1>
         </div>
-        <img src="${user?.photoURL}" class="w-10 h-10 rounded-full" />
+        <img src="${user.photoURL}" class="w-10 h-10 rounded-full" />
       </div>
 
       <!-- Filtro período -->
@@ -185,17 +184,6 @@ export async function renderDashboard() {
     });
   }
 
-  function toMoneda(monto, monedaOrigen) {
-    if (monedaDash === 'CRC') return convertir(monto, monedaOrigen, 'CRC', tc);
-    if (monedaDash === 'USD') return convertir(monto, monedaOrigen, 'USD', tc);
-    return monto;
-  }
-
-  function formatMonto(monto, moneda) {
-    const simbolo = moneda === 'USD' ? '$' : '₡';
-    return `${simbolo}${monto.toLocaleString()}`;
-  }
-
   function getPeriodoLabel() {
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const ahora = new Date();
@@ -229,7 +217,6 @@ export async function renderDashboard() {
       ultimas.push({ ...d, fechaDate: d.fecha?.toDate?.() || new Date() });
     });
 
-    // Balance display
     const balanceEl = document.querySelector('#balance-total-display');
     const ingresosEl = document.querySelector('#total-ingresos-display');
     const gastosEl = document.querySelector('#total-gastos-display');
@@ -331,7 +318,7 @@ export async function renderDashboard() {
   // Escuchar transacciones
   const q = query(
     collection(db, 'transacciones'),
-    where('uid', '==', auth.currentUser.uid)
+    where('uid', '==', user.uid)
   );
 
   onSnapshot(q, (snapshot) => {

@@ -5,114 +5,173 @@ const iconEditar = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="1
 const iconBorrar = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
 const iconAbonar = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`;
 
+const iconMeta = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`;
+
+const extras = ['#1a1a2e','#533483','#c0392b','#e67e22','#27ae60','#2980b9','#7f8c8d'];
+
+function getColoresAhorro() {
+  const temaId = localStorage.getItem('tema') || 'blanco';
+  const temaPrimary = {
+    blanco:   '#63c5c0',
+    neutro:   '#6366f1',
+    rosa:     '#d36998',
+    celeste:  '#0284c7',
+    amarillo: '#f3ce68',
+    verde:    '#348f72',
+  };
+  const primary = temaPrimary[temaId] || '#63c5c0';
+  return [primary, ...extras.filter(c => c !== primary)];
+}
+
 let editandoId = null;
+let colorSeleccionado = getColoresAhorro()[0];
+let metaActivaId = null;
+let metaActivaAhorro = 0;
+
+function abrirSheet() {
+  document.querySelector('#sheet-overlay').classList.remove('hidden');
+  document.querySelector('#sheet-ahorro').classList.remove('hidden');
+}
+
+function cerrarSheet() {
+  document.querySelector('#sheet-overlay').classList.add('hidden');
+  document.querySelector('#sheet-ahorro').classList.add('hidden');
+  editandoId = null;
+  colorSeleccionado = getColoresAhorro()[0];
+  document.querySelector('#ahorro-nombre').value = '';
+  document.querySelector('#ahorro-meta').value = '';
+  document.querySelector('#sheet-titulo').textContent = 'Nueva meta';
+  document.querySelector('#btn-guardar-ahorro').textContent = 'Crear meta';
+  document.querySelectorAll('.color-btn').forEach(b =>
+    b.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-500'));
+  document.querySelector('.color-btn')?.classList.add('ring-2', 'ring-offset-2', 'ring-gray-500');
+}
 
 export function renderAhorros() {
+  const colores = getColoresAhorro();
+
   document.querySelector('#main-content').innerHTML = `
     <div class="max-w-md mx-auto">
 
-      <h1 class="text-2xl font-semibold text-gray-800 mb-6">Ahorros</h1>
-
-      <!-- Formulario nueva meta -->
-      <div class="bg-white rounded-2xl p-4 shadow-sm mb-4" id="formulario-ahorro">
-        <p class="text-gray-500 text-xs mb-2 font-medium">Nueva meta</p>
-        <input id="ahorro-nombre" type="text" placeholder="Nombre (ej: Vacaciones)"
-          class="w-full border border-gray-200 rounded-xl px-4 py-3 mb-3 text-sm outline-none focus:border-indigo-400"/>
-        <input id="ahorro-meta" type="number" placeholder="Meta (₡)"
-          class="w-full border border-gray-200 rounded-xl px-4 py-3 mb-3 text-sm outline-none focus:border-indigo-400"/>
-
-        <div class="flex gap-2">
-          <button id="btn-cancelar" class="hidden w-full border border-gray-200 text-gray-500 rounded-xl py-3 text-sm font-medium hover:bg-gray-50 transition">
-            Cancelar
-          </button>
-          <button id="btn-agregar-ahorro" class="w-full bg-indigo-600 text-white rounded-xl py-3 text-sm font-medium hover:bg-indigo-700 transition">
-            Crear meta
-          </button>
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <h1 class="text-2xl font-semibold text-gray-800">Ahorros</h1>
+          <p class="text-gray-400 text-xs mt-0.5">Tus objetivos financieros</p>
         </div>
+        <button id="btn-nueva-meta" class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center hover:bg-indigo-700 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
       </div>
 
-      <!-- Lista de metas -->
+      <p id="total-ahorros" class="text-gray-500 text-xs mb-4"></p>
       <div id="lista-ahorros"></div>
 
-      <!-- Modal abonar -->
-      <div id="modal-abonar" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-end justify-center z-50">
-        <div class="bg-white rounded-t-2xl p-6 w-full max-w-md">
-          <p class="text-gray-700 font-medium mb-3">Agregar abono</p>
-          <input id="abono-monto" type="number" placeholder="Monto (₡)"
-            class="w-full border border-gray-200 rounded-xl px-4 py-3 mb-3 text-sm outline-none focus:border-indigo-400"/>
-          <div class="flex gap-2">
-            <button id="btn-cancelar-abono" class="w-full border border-gray-200 text-gray-500 rounded-xl py-3 text-sm font-medium">
-              Cancelar
-            </button>
-            <button id="btn-confirmar-abono" class="w-full bg-indigo-600 text-white rounded-xl py-3 text-sm font-medium hover:bg-indigo-700 transition">
-              Abonar
-            </button>
-          </div>
-        </div>
-      </div>
+    </div>
 
+    <div id="sheet-overlay" class="hidden fixed inset-0 bg-black bg-opacity-40 z-40"></div>
+
+    <!-- Sheet nueva meta -->
+    <div id="sheet-ahorro" class="hidden fixed bottom-0 left-0 right-0 z-50 flex justify-center">
+      <div class="bg-white rounded-t-2xl w-full max-w-md p-6 pb-8">
+        <div class="flex items-center justify-between mb-4">
+          <p id="sheet-titulo" class="text-gray-800 font-semibold">Nueva meta</p>
+          <button id="btn-cerrar-sheet" style="color:#9ca3af">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <input id="ahorro-nombre" type="text" placeholder="Nombre (ej: Vacaciones)"
+          style="background:#fff;color:#1f2937;border-color:#e5e7eb"
+          class="w-full border rounded-xl px-4 py-3 mb-3 text-sm outline-none"/>
+
+        <input id="ahorro-meta" type="number" placeholder="Meta (₡)"
+          style="background:#fff;color:#1f2937;border-color:#e5e7eb"
+          class="w-full border rounded-xl px-4 py-3 mb-3 text-sm outline-none"/>
+
+        <p style="color:#9ca3af;font-size:12px;margin-bottom:8px">Color</p>
+        <div class="flex gap-2 mb-4 flex-wrap">
+          ${colores.map((c, i) => `
+            <button data-color="${c}" class="color-btn w-9 h-9 rounded-full transition-all ${i === 0 ? 'ring-2 ring-offset-2 ring-gray-500' : ''}" style="background-color: ${c}"></button>
+          `).join('')}
+        </div>
+
+        <button id="btn-guardar-ahorro" class="w-full bg-indigo-600 text-white rounded-2xl py-4 text-sm font-medium hover:bg-indigo-700 transition">
+          Crear meta
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal abonar -->
+    <div id="modal-abonar" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50 flex items-end justify-center">
+      <div class="bg-white rounded-t-2xl w-full max-w-md p-6 pb-8">
+        <div class="flex items-center justify-between mb-4">
+          <p class="font-semibold" style="color:#1f2937">Agregar abono</p>
+          <button id="btn-cerrar-abono" style="color:#9ca3af">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <input id="abono-monto" type="number" placeholder="Monto (₡)"
+          style="background:#fff;color:#1f2937;border-color:#e5e7eb"
+          class="w-full border rounded-xl px-4 py-3 mb-4 text-sm outline-none"/>
+        <button id="btn-confirmar-abono" class="w-full bg-indigo-600 text-white rounded-2xl py-4 text-sm font-medium hover:bg-indigo-700 transition">
+          Abonar
+        </button>
+      </div>
     </div>
   `;
 
-  let metaActivaId = null;
-  let metaActivaAhorro = 0;
+  document.querySelector('#btn-nueva-meta').addEventListener('click', abrirSheet);
+  document.querySelector('#btn-cerrar-sheet').addEventListener('click', cerrarSheet);
+  document.querySelector('#sheet-overlay').addEventListener('click', cerrarSheet);
 
-  // Cerrar modal
-  document.querySelector('#btn-cancelar-abono').addEventListener('click', () => {
+  document.querySelector('#btn-cerrar-abono').addEventListener('click', () => {
     document.querySelector('#modal-abonar').classList.add('hidden');
     document.querySelector('#abono-monto').value = '';
     metaActivaId = null;
   });
 
-  // Confirmar abono
   document.querySelector('#btn-confirmar-abono').addEventListener('click', async () => {
     const monto = parseFloat(document.querySelector('#abono-monto').value);
     if (isNaN(monto) || monto <= 0 || !metaActivaId) return;
-
     await updateDoc(doc(db, 'ahorros', metaActivaId), {
       ahorrado: metaActivaAhorro + monto
     });
-
     document.querySelector('#modal-abonar').classList.add('hidden');
     document.querySelector('#abono-monto').value = '';
     metaActivaId = null;
   });
 
-  // Cancelar edición
-  document.querySelector('#btn-cancelar').addEventListener('click', () => {
-    editandoId = null;
-    document.querySelector('#ahorro-nombre').value = '';
-    document.querySelector('#ahorro-meta').value = '';
-    document.querySelector('#btn-agregar-ahorro').textContent = 'Crear meta';
-    document.querySelector('#btn-cancelar').classList.add('hidden');
+  document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.color-btn').forEach(b =>
+        b.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-500'));
+      btn.classList.add('ring-2', 'ring-offset-2', 'ring-gray-500');
+      colorSeleccionado = btn.dataset.color;
+    });
   });
 
-  // Crear o editar meta
-  document.querySelector('#btn-agregar-ahorro').addEventListener('click', async () => {
+  document.querySelector('#btn-guardar-ahorro').addEventListener('click', async () => {
     const nombre = document.querySelector('#ahorro-nombre').value.trim();
     const meta = parseFloat(document.querySelector('#ahorro-meta').value);
     if (!nombre || isNaN(meta) || meta <= 0) return;
 
     if (editandoId) {
-      await updateDoc(doc(db, 'ahorros', editandoId), { nombre, meta });
-      editandoId = null;
-      document.querySelector('#btn-agregar-ahorro').textContent = 'Crear meta';
-      document.querySelector('#btn-cancelar').classList.add('hidden');
+      await updateDoc(doc(db, 'ahorros', editandoId), {
+        nombre, meta, color: colorSeleccionado
+      });
     } else {
       await addDoc(collection(db, 'ahorros'), {
         uid: auth.currentUser.uid,
-        nombre,
-        meta,
-        ahorrado: 0,
+        nombre, meta, ahorrado: 0,
+        color: colorSeleccionado,
         fecha: new Date()
       });
     }
-
-    document.querySelector('#ahorro-nombre').value = '';
-    document.querySelector('#ahorro-meta').value = '';
+    cerrarSheet();
   });
 
-  // Lista en tiempo real
   const q = query(
     collection(db, 'ahorros'),
     where('uid', '==', auth.currentUser.uid),
@@ -121,6 +180,7 @@ export function renderAhorros() {
 
   onSnapshot(q, (snapshot) => {
     const lista = document.querySelector('#lista-ahorros');
+    const totalEl = document.querySelector('#total-ahorros');
     if (!lista) return;
 
     if (snapshot.empty) {
@@ -128,42 +188,62 @@ export function renderAhorros() {
       return;
     }
 
-    lista.innerHTML = snapshot.docs.map(d => {
-      const data = d.data();
+    const ahorros = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    const totalAhorrado = ahorros.reduce((s, a) => s + (a.ahorrado || 0), 0);
+    if (totalEl) totalEl.textContent = `Total ahorrado: ₡${totalAhorrado.toLocaleString()}`;
+
+    lista.innerHTML = ahorros.map(data => {
       const porcentaje = Math.min(Math.round((data.ahorrado / data.meta) * 100), 100);
       const completa = porcentaje >= 100;
+      const color = data.color || colores[0];
+      const faltan = Math.max(0, data.meta - data.ahorrado);
 
       return `
-        <div class="bg-white rounded-2xl p-4 shadow-sm mb-3">
-          <div class="flex justify-between items-start mb-3">
-            <div>
-              <p class="text-gray-800 font-medium text-sm">${data.nombre}</p>
-              <p class="text-gray-400 text-xs mt-0.5">₡${data.ahorrado.toLocaleString()} de ₡${data.meta.toLocaleString()}</p>
+        <!-- Card meta con gradiente -->
+        <div class="rounded-2xl p-5 mb-2 relative overflow-hidden"
+          style="background: linear-gradient(135deg, ${color}, ${color}99)">
+          <div class="flex justify-between items-start mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background: rgba(255,255,255,0.2)">
+                ${iconMeta}
+              </div>
+              <div>
+                <p class="text-white font-semibold text-base">${data.nombre}</p>
+                <p class="text-white text-xs" style="opacity:0.7">Faltan ₡${faltan.toLocaleString()}</p>
+              </div>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-semibold ${completa ? 'text-green-500' : 'text-indigo-600'}">${porcentaje}%</span>
-              <button data-id="${d.id}" data-nombre="${data.nombre}" data-meta="${data.meta}"
-                class="btn-editar text-gray-400 hover:text-indigo-500 transition">${iconEditar}</button>
-              <button data-id="${d.id}"
-                class="btn-borrar text-gray-400 hover:text-red-500 transition">${iconBorrar}</button>
+            <div class="flex flex-col items-end gap-2">
+              <p class="text-white font-bold text-lg">${porcentaje}%</p>
+              <div class="flex gap-2">
+                <button data-id="${data.id}" data-nombre="${data.nombre}" data-meta="${data.meta}" data-color="${color}"
+                  class="btn-editar" style="color:white;opacity:0.8">${iconEditar}</button>
+                <button data-id="${data.id}"
+                  class="btn-borrar" style="color:white;opacity:0.8">${iconBorrar}</button>
+              </div>
             </div>
           </div>
 
           <!-- Barra de progreso -->
-          <div class="w-full bg-gray-100 rounded-full h-2 mb-3">
-            <div class="h-2 rounded-full transition-all ${completa ? 'bg-green-400' : 'bg-indigo-500'}"
-              style="width: ${porcentaje}%"></div>
+          <div class="w-full rounded-full h-2 mb-2" style="background: rgba(255,255,255,0.3)">
+            <div class="h-2 rounded-full transition-all" style="width: ${porcentaje}%; background: white"></div>
           </div>
 
-          <button data-id="${d.id}" data-ahorrado="${data.ahorrado}"
-            class="btn-abonar w-full flex items-center justify-center gap-2 border border-indigo-200 text-indigo-600 rounded-xl py-2 text-sm hover:bg-indigo-50 transition ${completa ? 'opacity-50 pointer-events-none' : ''}">
-            ${iconAbonar} Agregar abono
+          <div class="flex justify-between text-white text-xs" style="opacity:0.8">
+            <span>₡${(data.ahorrado || 0).toLocaleString()}</span>
+            <span>₡${data.meta.toLocaleString()}</span>
+          </div>
+        </div>
+
+        <!-- Info debajo -->
+        <div class="bg-white rounded-2xl px-4 pt-3 pb-4 mb-4 shadow-sm">
+          <button data-id="${data.id}" data-ahorrado="${data.ahorrado}"
+            class="btn-abonar w-full flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 rounded-xl py-2.5 text-sm font-medium hover:bg-indigo-100 transition ${completa ? 'opacity-50 pointer-events-none' : ''}">
+            ${iconAbonar} ${completa ? '¡Meta alcanzada! 🎉' : 'Agregar abono'}
           </button>
         </div>
       `;
     }).join('');
 
-    // Abonar
     document.querySelectorAll('.btn-abonar').forEach(btn => {
       btn.addEventListener('click', () => {
         metaActivaId = btn.dataset.id;
@@ -172,19 +252,23 @@ export function renderAhorros() {
       });
     });
 
-    // Editar
     document.querySelectorAll('.btn-editar').forEach(btn => {
       btn.addEventListener('click', () => {
         editandoId = btn.dataset.id;
+        colorSeleccionado = btn.dataset.color;
         document.querySelector('#ahorro-nombre').value = btn.dataset.nombre;
         document.querySelector('#ahorro-meta').value = btn.dataset.meta;
-        document.querySelector('#btn-agregar-ahorro').textContent = 'Guardar cambios';
-        document.querySelector('#btn-cancelar').classList.remove('hidden');
-        document.querySelector('#formulario-ahorro').scrollIntoView({ behavior: 'smooth' });
+        document.querySelector('#sheet-titulo').textContent = 'Editar meta';
+        document.querySelector('#btn-guardar-ahorro').textContent = 'Guardar cambios';
+        document.querySelectorAll('.color-btn').forEach(b => {
+          b.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-500');
+          if (b.dataset.color === colorSeleccionado)
+            b.classList.add('ring-2', 'ring-offset-2', 'ring-gray-500');
+        });
+        abrirSheet();
       });
     });
 
-    // Borrar
     document.querySelectorAll('.btn-borrar').forEach(btn => {
       btn.addEventListener('click', async () => {
         if (confirm('¿Borrar esta meta?')) {
