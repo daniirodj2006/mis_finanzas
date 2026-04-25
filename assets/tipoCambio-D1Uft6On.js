@@ -1,0 +1,1 @@
+var e=null,t=null;async function n(){let n=new Date;if(e&&t&&n-t<36e5)return e;try{return e=(await(await fetch(`https://api.exchangerate-api.com/v4/latest/USD`)).json()).rates.CRC,t=n,e}catch{return 500}}function r(e,t,n,r){return t===n?e:t===`USD`&&n===`CRC`?Math.round(e*r):t===`CRC`&&n===`USD`?parseFloat((e/r).toFixed(2)):e}export{n,r as t};
